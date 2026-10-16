@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+data
+tests
+.env
+*.log
+tests/e2e/screenshots
+README.md
+DEPLOYMENT.md
+vercel.json
+api

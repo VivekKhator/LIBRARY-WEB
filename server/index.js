@@ -13,6 +13,18 @@ const server = http.createServer(createApp());
 server.keepAliveTimeout = 65_000;
 server.headersTimeout = 70_000;
 
+if (config.isProd) {
+  if (!config.sessionSecretProvided) {
+    logger.warn('SESSION_SECRET is not set: a new key is generated per boot, so every restart signs everyone out');
+  }
+  if (!process.env.SEED_ADMIN_PASSWORD) {
+    logger.warn('Demo accounts are seeded with published passwords; set SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD before exposing this publicly');
+  }
+  if (config.isServerless) {
+    logger.warn('Serverless filesystem detected: data in /tmp is per-instance and lost on cold start');
+  }
+}
+
 server.listen(config.port, config.host, () => {
   logger.info(`BiblioBazaar listening on http://${config.host === '0.0.0.0' ? 'localhost' : config.host}:${config.port}`, {
     env: config.env,

@@ -26,16 +26,25 @@ if (existsSync(envFile)) {
 const env = process.env.NODE_ENV || 'development';
 const resolve = (p) => (p === ':memory:' || path.isAbsolute(p) ? p : path.join(ROOT, p));
 
+// Serverless platforms give you a read-only bundle plus a writable /tmp, so default
+// state there instead of the project directory. Data is per-instance and ephemeral.
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const defaultDbPath = isServerless ? '/tmp/bibliobazaar/library.db' : path.join(ROOT, 'data', 'library.db');
+const defaultUploadDir = isServerless ? '/tmp/bibliobazaar/uploads' : path.join(ROOT, 'data', 'uploads');
+
 export const config = {
   env,
   isProd: env === 'production',
   isTest: env === 'test',
   port: Number(process.env.PORT || 3000),
   host: process.env.HOST || '0.0.0.0',
-  dbPath: process.env.DB_PATH ? resolve(process.env.DB_PATH) : path.join(ROOT, 'data', 'library.db'),
-  uploadDir: process.env.UPLOAD_DIR ? resolve(process.env.UPLOAD_DIR) : path.join(ROOT, 'data', 'uploads'),
+  isServerless,
+  dbPath: process.env.DB_PATH ? resolve(process.env.DB_PATH) : defaultDbPath,
+  uploadDir: process.env.UPLOAD_DIR ? resolve(process.env.UPLOAD_DIR) : defaultUploadDir,
   publicDir: path.join(ROOT, 'public'),
+  // Without a configured secret every restart invalidates existing sessions.
   sessionSecret: process.env.SESSION_SECRET || randomBytes(32).toString('hex'),
+  sessionSecretProvided: Boolean(process.env.SESSION_SECRET),
   sessionTtlDays: 30,
   logLevel: process.env.LOG_LEVEL || (env === 'test' ? 'silent' : 'info'),
   // Abuse protection. Generous in tests so suites are not throttled by their own fixtures.

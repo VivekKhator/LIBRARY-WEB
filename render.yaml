@@ -1,0 +1,27 @@
+# Render blueprint: a single always-on Node service with a persistent disk.
+# Everything in the app works here, including uploads and durable sessions.
+services:
+  - type: web
+    name: bibliobazaar
+    runtime: node
+    plan: starter            # a persistent disk requires a paid instance type
+    buildCommand: "echo 'no build step'"
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true  # Render generates and stores a strong value
+      - key: DB_PATH
+        value: /var/data/library.db
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: SEED_ADMIN_EMAIL
+        sync: false          # set these in the dashboard before the first boot
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: bibliobazaar-data
+      mountPath: /var/data
+      sizeGB: 1

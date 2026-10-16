@@ -34,8 +34,16 @@ export function seed({ quiet = false } = {}) {
       run('INSERT OR IGNORE INTO categories (name, slug, description, icon) VALUES (?,?,?,?)', [c.name, c.slug, c.description, c.icon]);
     }
 
+    // A public deployment should not ship with the published admin credentials.
+    const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+    const seedUsers = USERS.map((u) =>
+      u.role === 'admin' && (adminEmail || adminPassword)
+        ? { ...u, email: adminEmail || u.email, password: adminPassword || u.password }
+        : u);
+
     const userIds = {};
-    for (const u of USERS) {
+    for (const u of seedUsers) {
       const storeSlug = u.storeName ? slugify(u.storeName) : null;
       const res = run(
         `INSERT INTO users (email, password_hash, name, role, bio, store_name, store_slug, store_bio, created_at)
@@ -46,7 +54,7 @@ export function seed({ quiet = false } = {}) {
       userIds[u.email] = Number(res.lastInsertRowid);
     }
 
-    const sellers = USERS.filter((u) => u.storeName).map((u) => userIds[u.email]);
+    const sellers = seedUsers.filter((u) => u.storeName).map((u) => userIds[u.email]);
     const categoryIds = Object.fromEntries(all('SELECT id, slug FROM categories').map((c) => [c.slug, c.id]));
 
     const bookIds = [];
@@ -106,7 +114,7 @@ export function seed({ quiet = false } = {}) {
       );
     }
 
-    const customers = USERS.filter((u) => u.role === 'customer').map((u) => userIds[u.email]);
+    const customers = seedUsers.filter((u) => u.role === 'customer').map((u) => userIds[u.email]);
 
     // Reviews: spread across the catalogue, written by customers who did not list the book.
     let reviewCount = 0;
@@ -135,7 +143,7 @@ export function seed({ quiet = false } = {}) {
       }
     }
 
-    for (const u of USERS.filter((x) => x.role === 'customer')) {
+    for (const u of seedUsers.filter((x) => x.role === 'customer')) {
       run(
         `INSERT INTO addresses (user_id, label, full_name, line1, city, state, postal_code, country, phone, is_default)
          VALUES (?,?,?,?,?,?,?,?,?,1)`,
@@ -236,7 +244,7 @@ export function seed({ quiet = false } = {}) {
     }
 
     log('seeded database', {
-      users: USERS.length,
+      users: seedUsers.length,
       books: bookIds.length + 3,
       reviews: reviewCount,
       orders: get('SELECT COUNT(*) AS c FROM orders').c,

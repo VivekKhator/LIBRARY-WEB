@@ -11,6 +11,9 @@ npm run test:all    # 80 API tests + 48 browser end-to-end checks
 
 Requires **Node.js 22.5+** (for the built-in `node:sqlite`). Nothing to install, no build step.
 
+Deploying? See **[DEPLOYMENT.md](DEPLOYMENT.md)** — Vercel config is committed (demo-grade: serverless
+storage is ephemeral), alongside a Dockerfile and Render blueprint for a durable deployment.
+
 ---
 
 ## Demo accounts
@@ -176,6 +179,11 @@ Copy `.env.example` to `.env` (every value has a safe default):
 | `UPLOAD_DIR` | `./data/uploads` | Cover uploads |
 | `LOG_LEVEL` | `info` | `silent`, `error`, `warn`, `info`, `debug` |
 | `RATE_LIMIT_LOGIN` / `RATE_LIMIT_REGISTER` | `20` / `10` | Attempts per window per IP |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | demo values | Override the seeded admin account — **set both before exposing a deployment publicly** |
+
+On a serverless platform (`VERCEL` set) the database and uploads default to `/tmp`, which is
+per-instance and cleared on cold start. The server warns at boot in production when `SESSION_SECRET`
+is unset, when the demo admin password is still in place, or when it detects a serverless filesystem.
 
 Commerce rules (tax rate, shipping prices, free-shipping threshold, rental durations, late fees,
 platform fee) live in `server/config.js` and are published to the client via `/api/meta`, so there is

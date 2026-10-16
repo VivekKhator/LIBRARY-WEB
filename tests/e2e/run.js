@@ -494,7 +494,8 @@ await step('admin manages categories', async () => {
   await page.fill('.modal input[name="name"]', name);
   await page.locator('.modal button:has-text("Create")').click();
   await toast('Category created');
-  await page.waitForLoadState('networkidle');
+  // Wait for the table to actually re-render rather than racing the reload.
+  await page.waitForSelector(`tbody tr:has-text("${name}")`, { timeout: 15000 });
   assert((await page.locator('tbody tr').count()) === before + 1, 'category was not added');
 });
 
