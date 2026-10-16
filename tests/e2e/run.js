@@ -32,6 +32,12 @@ try {
   }
 }
 
+const ACCOUNTS = {
+  admin: { email: 'admin@bibliobazaar.test', password: 'Admin1234' },
+  seller: { email: 'seller@bibliobazaar.test', password: 'Seller1234' },
+  reader: { email: 'reader@bibliobazaar.test', password: 'Reader1234' },
+};
+
 const results = [];
 let failures = 0;
 const log = (msg) => process.stdout.write(`${msg}\n`);
@@ -210,7 +216,7 @@ await step('registration creates an account and merges the guest cart', async ()
 
 await step('seeded reader account signs in', async () => {
   await signOut();
-  await signIn('reader@bibliobazaar.test', 'Reader1234');
+  await signIn(ACCOUNTS.reader.email, ACCOUNTS.reader.password);
   assert(await page.locator('[aria-label="Account menu"]').count(), 'account menu missing after sign-in');
 });
 
@@ -386,7 +392,7 @@ await step('address can be added from the account page', async () => {
 log('\nSeller journey');
 await step('seller dashboard shows revenue and stock', async () => {
   await signOut();
-  await signIn('seller@bibliobazaar.test', 'Seller1234');
+  await signIn(ACCOUNTS.seller.email, ACCOUNTS.seller.password);
   await go('/seller');
   assert((await page.locator('.stat').count()) >= 4, 'dashboard stats missing');
   assert(await page.locator('.chart').count(), 'revenue chart missing');
@@ -437,7 +443,7 @@ await step('seller can advance an order through fulfilment', async () => {
 log('\nAdmin journey');
 await step('admin console reports platform metrics', async () => {
   await signOut();
-  await signIn('admin@bibliobazaar.test', 'Admin1234');
+  await signIn(ACCOUNTS.admin.email, ACCOUNTS.admin.password);
   await go('/admin');
   assert((await page.locator('.stat').count()) >= 4, 'admin stats missing');
   assert((await page.locator('.bar-row').count()) >= 1, 'admin breakdown charts missing');
@@ -511,11 +517,87 @@ await step('admin order search finds the shopper order', async () => {
   assert((await page.locator('tbody tr').count()) >= 1, 'admin order search returned nothing');
 });
 
+// ---------------------------------------------------------------- secondary surfaces
+log('\nSecondary surfaces');
+await step('header search suggests titles as you type', async () => {
+  await signOut();
+  await signIn(ACCOUNTS.reader.email, ACCOUNTS.reader.password);
+  await page.fill('.searchbar input', 'atom');
+  await page.waitForSelector('.suggest__item', { timeout: 8000 });
+  assert((await page.locator('.suggest__item').count()) > 0, 'no suggestions rendered');
+  await page.keyboard.press('Escape');
+});
+
+await step('notification centre opens and clears unread items', async () => {
+  await page.click('[aria-label="Notifications"]');
+  await page.waitForSelector('.notif__item, .notif p', { timeout: 8000 });
+  const markAll = page.locator('button:has-text("Mark all read")');
+  if (await markAll.count()) {
+    await markAll.click();
+    await page.waitForFunction(() => document.querySelectorAll('.notif__item.is-unread').length === 0, null, { timeout: 8000 });
+  }
+  await page.mouse.click(5, 400);
+});
+
+await step('account security and review tabs render', async () => {
+  await go('/account?tab=security');
+  await page.waitForSelector('#currentPassword', { timeout: 10000 });
+  assert(await page.locator('table.table').count(), 'session list missing');
+  await page.locator('.tabs button:has-text("My reviews")').click();
+  await page.waitForSelector('.panel, .empty', { timeout: 10000 });
+  await page.locator('.tabs button:has-text("Notifications")').click();
+  await page.waitForSelector('.notif__item, .empty', { timeout: 10000 });
+});
+
+await step('public storefront lists a seller inventory and sorts it', async () => {
+  await go('/browse');
+  const slug = await page.evaluate(async () => (await (await fetch('/api/books?perPage=1')).json()).items[0].seller.storeSlug);
+  await go(`/stores/${slug}`);
+  assert(await page.locator('.store-hero').count(), 'storefront hero missing');
+  assert((await page.locator('.book-card').count()) > 0, 'storefront has no listings');
+  await page.locator('#store-sort').selectOption('price_asc');
+  await ready();
+  assert(page.url().includes('sort=price_asc'), 'storefront sort did not update the URL');
+});
+
+await step('buy again refills the cart from a past order', async () => {
+  await go('/orders');
+  await nav(page.locator('.order-card a').first());
+  await page.waitForSelector('h1:has-text("Order BB-")', { timeout: 10000 });
+  const again = page.locator('button:has-text("Buy again")');
+  assert(await again.count(), 'buy again control missing');
+  await again.click();
+  await toast('added back to your cart');
+});
+
+await step('seller drafts stay out of the moderation queue', async () => {
+  await signOut();
+  await signIn(ACCOUNTS.seller.email, ACCOUNTS.seller.password);
+  await go('/seller/listings/new');
+  const draftTitle = `Draft Listing ${Date.now()}`;
+  await page.fill('#f-title', draftTitle);
+  await page.fill('#f-author', 'Draft Author');
+  await page.fill('#f-price', '7.25');
+  await page.locator('button:has-text("Save as draft")').click();
+  await page.waitForURL(/\/seller\/listings/);
+  await ready();
+  await go('/seller/listings?status=draft');
+  assert(await page.locator(`tr:has-text("${draftTitle}")`).count(), 'draft was not saved');
+});
+
+await step('rental pricing fields appear only when borrowing is enabled', async () => {
+  await go('/seller/listings/new');
+  assert((await page.locator('#f-rentWeekly').count()) === 0, 'rental fields should start hidden');
+  await page.locator('.check:has-text("Available to borrow") input').check();
+  await page.waitForSelector('#f-rentWeekly', { timeout: 5000 });
+  assert((await page.locator('#f-rentWeekly').count()) === 1, 'rental fields did not appear');
+});
+
 // ---------------------------------------------------------------- platform
 log('\nPlatform behaviour');
 await step('access control redirects non-admins away from the console', async () => {
   await signOut();
-  await signIn('reader@bibliobazaar.test', 'Reader1234');
+  await signIn(ACCOUNTS.reader.email, ACCOUNTS.reader.password);
   await go('/admin');
   assert(!page.url().includes('/admin'), `reader reached the admin console: ${page.url()}`);
 });

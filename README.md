@@ -6,7 +6,7 @@ and the real UI in a browser.
 
 ```bash
 npm start           # http://localhost:3000  (seeds itself on first run)
-npm run test:all    # 80 API tests + 41 browser end-to-end checks
+npm run test:all    # 80 API tests + 48 browser end-to-end checks
 ```
 
 Requires **Node.js 22.5+** (for the built-in `node:sqlite`). Nothing to install, no build step.
@@ -145,7 +145,7 @@ curl -s -c jar -X POST http://localhost:3000/api/auth/login \
 
 ```bash
 npm test            # 80 API integration tests, each suite on its own SQLite file
-npm run test:e2e    # 41 Playwright checks driving the real UI
+npm run test:e2e    # 48 Playwright checks driving the real UI
 SHOTS=1 npm run test:e2e   # also writes screenshots to tests/e2e/screenshots/
 npm run test:all    # both
 ```
