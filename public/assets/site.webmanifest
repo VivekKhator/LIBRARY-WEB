@@ -1,0 +1,10 @@
+{
+  "name": "BiblioBazaar",
+  "short_name": "BiblioBazaar",
+  "description": "Buy, sell and borrow books in one marketplace library.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f6f2",
+  "theme_color": "#0f3c38",
+  "icons": [{ "src": "/assets/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

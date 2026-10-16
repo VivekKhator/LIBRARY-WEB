@@ -1,0 +1,17 @@
+{
+  "name": "bibliobazaar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BiblioBazaar - a full-stack library marketplace where readers buy, sell, and borrow books.",
+  "type": "module",
+  "engines": { "node": ">=22.5.0" },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "seed": "node scripts/seed.js",
+    "reset": "node scripts/reset.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:e2e": "node tests/e2e/run.js",
+    "test:all": "npm test && npm run test:e2e"
+  }
+}
